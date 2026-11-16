@@ -1,0 +1,629 @@
+{
+  "entities": {
+    "Group": {
+      "title": "Group",
+      "description": "Metadata and lifetime counters for the MoonLight Gang TikTok group chat.",
+      "type": "object",
+      "properties": {
+        "groupId": {
+          "type": "string",
+          "description": "Unique identifier for the group (moonlight-gang).",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the monitored TikTok group chat.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "platform": {
+          "type": "string",
+          "description": "Source messaging platform.",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "creationDate": {
+          "type": "string",
+          "description": "Configured group creation date in YYYY-MM-DD (Asia/Dhaka).",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone identifier (Asia/Dhaka).",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "totalMembers": {
+          "type": "number",
+          "description": "Total number of tracked group members."
+        },
+        "totalLifetimeMessages": {
+          "type": "number",
+          "description": "Total messages recorded since the configured group creation date."
+        },
+        "totalActiveDays": {
+          "type": "number",
+          "description": "Total distinct days with at least one recorded message."
+        },
+        "highestDailyCount": {
+          "type": "number",
+          "description": "Highest single-day message count recorded."
+        },
+        "highestDailyDate": {
+          "type": "string",
+          "description": "Date key (YYYY-MM-DD) of the highest single-day message count.",
+          "maxLength": 10
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last group update."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "UID of the admin or system actor that updated the group.",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "groupId",
+        "name",
+        "platform",
+        "creationDate",
+        "timezone",
+        "totalMembers",
+        "totalLifetimeMessages",
+        "totalActiveDays",
+        "highestDailyCount",
+        "highestDailyDate",
+        "updatedAt",
+        "updatedBy"
+      ]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "Tracked member profile and message activity aggregates.",
+      "type": "object",
+      "properties": {
+        "memberId": {
+          "type": "string",
+          "description": "Unique member identifier.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "groupId": {
+          "type": "string",
+          "description": "Parent group identifier.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the member.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "handle": {
+          "type": "string",
+          "description": "Optional official handle if provided by connector.",
+          "maxLength": 80
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "Official profile image URL if available, otherwise empty.",
+          "maxLength": 512
+        },
+        "totalMessages": {
+          "type": "number",
+          "description": "Lifetime message count for this member."
+        },
+        "lastActiveAt": {
+          "type": "string",
+          "description": "ISO 8601 timestamp of the member's last recorded message.",
+          "maxLength": 40
+        },
+        "lastActiveDateDhaka": {
+          "type": "string",
+          "description": "Last active date in Asia/Dhaka (YYYY-MM-DD).",
+          "maxLength": 10
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when member record was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when member record was last updated."
+        }
+      },
+      "required": [
+        "memberId",
+        "groupId",
+        "displayName",
+        "handle",
+        "avatarUrl",
+        "totalMessages",
+        "lastActiveAt",
+        "lastActiveDateDhaka",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MessageEvent": {
+      "title": "MessageEvent",
+      "description": "Deduplicated message metadata event without private message content.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "type": "string",
+          "description": "Unique message identifier used for deduplication.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "groupId": {
+          "type": "string",
+          "description": "Parent group identifier.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Unique identifier of the sender.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "senderDisplayName": {
+          "type": "string",
+          "description": "Display name of the sender at event time.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO 8601 UTC timestamp when the message was sent.",
+          "minLength": 10,
+          "maxLength": 40
+        },
+        "receivedTimestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the event was received by Firestore."
+        },
+        "dateKeyDhaka": {
+          "type": "string",
+          "description": "Date key in Asia/Dhaka timezone (YYYY-MM-DD).",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "monthKeyDhaka": {
+          "type": "string",
+          "description": "Month key in Asia/Dhaka timezone (YYYY-MM).",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "source": {
+          "type": "string",
+          "description": "Authorized ingestion source type.",
+          "enum": ["official_webhook", "authorized_import", "admin_manual"],
+          "maxLength": 32
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "UID of the authenticated actor that recorded the event.",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "messageCount": {
+          "type": "number",
+          "description": "Number of messages represented by this event (defaults to 1)."
+        }
+      },
+      "required": [
+        "messageId",
+        "groupId",
+        "senderId",
+        "senderDisplayName",
+        "timestamp",
+        "receivedTimestamp",
+        "dateKeyDhaka",
+        "monthKeyDhaka",
+        "source",
+        "createdBy"
+      ]
+    },
+    "DailyStatistic": {
+      "title": "DailyStatistic",
+      "description": "Aggregated daily message count in Asia/Dhaka timezone.",
+      "type": "object",
+      "properties": {
+        "dateKey": {
+          "type": "string",
+          "description": "Date key in Asia/Dhaka timezone (YYYY-MM-DD).",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "groupId": {
+          "type": "string",
+          "description": "Parent group identifier.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "monthKey": {
+          "type": "string",
+          "description": "Month key in Asia/Dhaka timezone (YYYY-MM).",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "totalMessages": {
+          "type": "number",
+          "description": "Total messages recorded on this date."
+        },
+        "activeMemberCount": {
+          "type": "number",
+          "description": "Number of distinct active members on this date."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last update."
+        }
+      },
+      "required": [
+        "dateKey",
+        "groupId",
+        "monthKey",
+        "totalMessages",
+        "activeMemberCount",
+        "updatedAt"
+      ]
+    },
+    "MonthlyStatistic": {
+      "title": "MonthlyStatistic",
+      "description": "Aggregated monthly message count in Asia/Dhaka timezone.",
+      "type": "object",
+      "properties": {
+        "monthKey": {
+          "type": "string",
+          "description": "Month key in Asia/Dhaka timezone (YYYY-MM).",
+          "minLength": 7,
+          "maxLength": 7,
+          "pattern": "^\\d{4}-\\d{2}$"
+        },
+        "groupId": {
+          "type": "string",
+          "description": "Parent group identifier.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "totalMessages": {
+          "type": "number",
+          "description": "Total messages recorded during this month."
+        },
+        "activeDays": {
+          "type": "number",
+          "description": "Number of active days during this month."
+        },
+        "peakDailyMessages": {
+          "type": "number",
+          "description": "Highest single-day message count in this month."
+        },
+        "peakDate": {
+          "type": "string",
+          "description": "Date key (YYYY-MM-DD) of the monthly peak.",
+          "maxLength": 10
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last update."
+        }
+      },
+      "required": [
+        "monthKey",
+        "groupId",
+        "totalMessages",
+        "activeDays",
+        "peakDailyMessages",
+        "peakDate",
+        "updatedAt"
+      ]
+    },
+    "IntegrationStatus": {
+      "title": "IntegrationStatus",
+      "description": "Real-time connector status and official API limitation metadata.",
+      "type": "object",
+      "properties": {
+        "groupId": {
+          "type": "string",
+          "description": "Parent group identifier.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current integration connection state.",
+          "enum": ["connected", "disconnected", "unavailable"],
+          "maxLength": 20
+        },
+        "adapterName": {
+          "type": "string",
+          "description": "Configured connector adapter name.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "endpointUrl": {
+          "type": "string",
+          "description": "Authorized Cloud Function webhook endpoint path.",
+          "maxLength": 256
+        },
+        "limitationNote": {
+          "type": "string",
+          "description": "Official API limitation or connection explanation.",
+          "maxLength": 500
+        },
+        "lastHeartbeatAt": {
+          "type": "string",
+          "description": "ISO timestamp of last connector heartbeat.",
+          "maxLength": 40
+        },
+        "lastEventAt": {
+          "type": "string",
+          "description": "ISO timestamp of last ingested message event.",
+          "maxLength": 40
+        },
+        "eventsProcessedCount": {
+          "type": "number",
+          "description": "Total authorized events processed by the adapter."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last status update."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "UID of the admin who updated the status.",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "groupId",
+        "status",
+        "adapterName",
+        "endpointUrl",
+        "limitationNote",
+        "lastHeartbeatAt",
+        "lastEventAt",
+        "eventsProcessedCount",
+        "updatedAt",
+        "updatedBy"
+      ]
+    },
+    "AdminSettings": {
+      "title": "AdminSettings",
+      "description": "Protected configuration for MoonLight Gang Analytics.",
+      "type": "object",
+      "properties": {
+        "groupId": {
+          "type": "string",
+          "description": "Parent group identifier.",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "groupCreationDate": {
+          "type": "string",
+          "description": "Group creation date in Asia/Dhaka (YYYY-MM-DD).",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Analytics timezone (Asia/Dhaka).",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "deduplicationEnabled": {
+          "type": "boolean",
+          "description": "Whether unique messageId deduplication is active."
+        },
+        "storeMetadataOnly": {
+          "type": "boolean",
+          "description": "Whether private message body content is excluded from storage."
+        },
+        "webhookHeaderName": {
+          "type": "string",
+          "description": "Signature/auth header name expected by Cloud Function webhook.",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last settings update."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "UID of the admin who updated settings.",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "groupId",
+        "groupCreationDate",
+        "timezone",
+        "deduplicationEnabled",
+        "storeMetadataOnly",
+        "webhookHeaderName",
+        "updatedAt",
+        "updatedBy"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator registry record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the administrator.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "description": "Verified administrator email address.",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "role": {
+          "type": "string",
+          "description": "Administrator role.",
+          "enum": ["admin"],
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when admin entry was created."
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "UserLogin": {
+      "title": "UserLogin",
+      "description": "Verified Google account sign-in registry tracking who accessed the site and when.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the signed-in user.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "groupId": {
+          "type": "string",
+          "description": "Parent group identifier (moonlight-gang).",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "description": "Verified Gmail address from Firebase Auth.",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Google account display name.",
+          "maxLength": 100
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Google account avatar HTTPS URL if available.",
+          "maxLength": 512
+        },
+        "loginCount": {
+          "type": "number",
+          "description": "Total number of recorded sign-ins for this user."
+        },
+        "firstLoginAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of first recorded login."
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest login."
+        },
+        "lastLoginIso": {
+          "type": "string",
+          "description": "ISO 8601 timestamp of latest login.",
+          "minLength": 10,
+          "maxLength": 40
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update."
+        }
+      },
+      "required": [
+        "uid",
+        "groupId",
+        "email",
+        "displayName",
+        "photoUrl",
+        "loginCount",
+        "firstLoginAt",
+        "lastLoginAt",
+        "lastLoginIso",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/groups/{groupId}": {
+      "schema": { "$ref": "#/entities/Group" },
+      "description": "Group metadata and lifetime aggregate metrics for MoonLight Gang."
+    },
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/Member" },
+      "description": "Tracked group members and their aggregate message statistics."
+    },
+    "/messageEvents/{messageId}": {
+      "schema": { "$ref": "#/entities/MessageEvent" },
+      "description": "Deduplicated message metadata events keyed by unique messageId."
+    },
+    "/dailyStatistics/{dateKey}": {
+      "schema": { "$ref": "#/entities/DailyStatistic" },
+      "description": "Daily message rollups keyed by YYYY-MM-DD in Asia/Dhaka."
+    },
+    "/monthlyStatistics/{monthKey}": {
+      "schema": { "$ref": "#/entities/MonthlyStatistic" },
+      "description": "Monthly message rollups keyed by YYYY-MM in Asia/Dhaka."
+    },
+    "/integrationStatus/{groupId}": {
+      "schema": { "$ref": "#/entities/IntegrationStatus" },
+      "description": "Connector integration status and API limitation disclosure."
+    },
+    "/adminSettings/{groupId}": {
+      "schema": { "$ref": "#/entities/AdminSettings" },
+      "description": "Admin-only configuration and webhook header metadata."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Admin role lookup documents."
+    },
+    "/userLogins/{uid}": {
+      "schema": { "$ref": "#/entities/UserLogin" },
+      "description": "Verified Google account sign-in logs (PII isolated to account owner and admins)."
+    }
+  }
+}

@@ -1,0 +1,449 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'sazzadulislamarafi80@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidDateKey(val) {
+      return val is string && val.size() == 10 && val.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function isValidMonthKey(val) {
+      return val is string && val.size() == 7 && val.matches('^\\d{4}-\\d{2}$');
+    }
+
+    function groupExistsAfter(gid) {
+      return existsAfter(/databases/$(database)/documents/groups/$(gid));
+    }
+
+    // Entity Validators
+    function isValidGroup(data) {
+      return data.keys().hasAll([
+          'groupId', 'name', 'platform', 'creationDate', 'timezone',
+          'totalMembers', 'totalLifetimeMessages', 'totalActiveDays',
+          'highestDailyCount', 'highestDailyDate', 'updatedAt', 'updatedBy'
+        ]) &&
+        data.keys().hasOnly([
+          'groupId', 'name', 'platform', 'creationDate', 'timezone',
+          'totalMembers', 'totalLifetimeMessages', 'totalActiveDays',
+          'highestDailyCount', 'highestDailyDate', 'updatedAt', 'updatedBy'
+        ]) &&
+        isValidId(data.groupId) &&
+        data.groupId == 'moonlight-gang' &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        data.platform is string && data.platform.size() >= 1 && data.platform.size() <= 50 &&
+        isValidDateKey(data.creationDate) &&
+        data.timezone is string && data.timezone.size() >= 1 && data.timezone.size() <= 40 &&
+        data.totalMembers is number && data.totalMembers >= 0 &&
+        data.totalLifetimeMessages is number && data.totalLifetimeMessages >= 0 &&
+        data.totalActiveDays is number && data.totalActiveDays >= 0 &&
+        data.highestDailyCount is number && data.highestDailyCount >= 0 &&
+        data.highestDailyDate is string && data.highestDailyDate.size() <= 10 &&
+        data.updatedAt is timestamp &&
+        data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128;
+    }
+
+    function isValidMember(data) {
+      return data.keys().hasAll([
+          'memberId', 'groupId', 'displayName', 'handle', 'avatarUrl',
+          'totalMessages', 'lastActiveAt', 'lastActiveDateDhaka', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'memberId', 'groupId', 'displayName', 'handle', 'avatarUrl',
+          'totalMessages', 'lastActiveAt', 'lastActiveDateDhaka', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.memberId) &&
+        isValidId(data.groupId) &&
+        data.groupId == 'moonlight-gang' &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+        data.handle is string && data.handle.size() <= 80 &&
+        data.avatarUrl is string && data.avatarUrl.size() <= 512 &&
+        data.totalMessages is number && data.totalMessages >= 0 &&
+        data.lastActiveAt is string && data.lastActiveAt.size() <= 40 &&
+        data.lastActiveDateDhaka is string && data.lastActiveDateDhaka.size() <= 10 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMessageEvent(data) {
+      return data.keys().hasAll([
+          'messageId', 'groupId', 'senderId', 'senderDisplayName', 'timestamp',
+          'receivedTimestamp', 'dateKeyDhaka', 'monthKeyDhaka', 'source', 'createdBy'
+        ]) &&
+        data.keys().hasOnly([
+          'messageId', 'groupId', 'senderId', 'senderDisplayName', 'timestamp',
+          'receivedTimestamp', 'dateKeyDhaka', 'monthKeyDhaka', 'source', 'createdBy',
+          'messageCount'
+        ]) &&
+        isValidId(data.messageId) &&
+        isValidId(data.groupId) &&
+        data.groupId == 'moonlight-gang' &&
+        isValidId(data.senderId) &&
+        data.senderDisplayName is string && data.senderDisplayName.size() >= 1 && data.senderDisplayName.size() <= 80 &&
+        data.timestamp is string && data.timestamp.size() >= 10 && data.timestamp.size() <= 40 &&
+        data.receivedTimestamp is timestamp &&
+        isValidDateKey(data.dateKeyDhaka) &&
+        isValidMonthKey(data.monthKeyDhaka) &&
+        data.source is string && data.source.size() <= 32 &&
+        data.source in ['official_webhook', 'authorized_import', 'admin_manual'] &&
+        data.createdBy is string && data.createdBy.size() >= 1 && data.createdBy.size() <= 128 &&
+        (!('messageCount' in data) || (data.messageCount is number && data.messageCount >= 1));
+    }
+
+    function isValidDailyStatistic(data) {
+      return data.keys().hasAll([
+          'dateKey', 'groupId', 'monthKey', 'totalMessages', 'activeMemberCount', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'dateKey', 'groupId', 'monthKey', 'totalMessages', 'activeMemberCount', 'updatedAt'
+        ]) &&
+        isValidDateKey(data.dateKey) &&
+        isValidId(data.groupId) &&
+        data.groupId == 'moonlight-gang' &&
+        isValidMonthKey(data.monthKey) &&
+        data.totalMessages is number && data.totalMessages >= 0 &&
+        data.activeMemberCount is number && data.activeMemberCount >= 0 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMonthlyStatistic(data) {
+      return data.keys().hasAll([
+          'monthKey', 'groupId', 'totalMessages', 'activeDays',
+          'peakDailyMessages', 'peakDate', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'monthKey', 'groupId', 'totalMessages', 'activeDays',
+          'peakDailyMessages', 'peakDate', 'updatedAt'
+        ]) &&
+        isValidMonthKey(data.monthKey) &&
+        isValidId(data.groupId) &&
+        data.groupId == 'moonlight-gang' &&
+        data.totalMessages is number && data.totalMessages >= 0 &&
+        data.activeDays is number && data.activeDays >= 0 &&
+        data.peakDailyMessages is number && data.peakDailyMessages >= 0 &&
+        data.peakDate is string && data.peakDate.size() <= 10 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidIntegrationStatus(data) {
+      return data.keys().hasAll([
+          'groupId', 'status', 'adapterName', 'endpointUrl', 'limitationNote',
+          'lastHeartbeatAt', 'lastEventAt', 'eventsProcessedCount', 'updatedAt', 'updatedBy'
+        ]) &&
+        data.keys().hasOnly([
+          'groupId', 'status', 'adapterName', 'endpointUrl', 'limitationNote',
+          'lastHeartbeatAt', 'lastEventAt', 'eventsProcessedCount', 'updatedAt', 'updatedBy'
+        ]) &&
+        isValidId(data.groupId) &&
+        data.groupId == 'moonlight-gang' &&
+        data.status is string && data.status.size() <= 20 &&
+        data.status in ['connected', 'disconnected', 'unavailable'] &&
+        data.adapterName is string && data.adapterName.size() >= 1 && data.adapterName.size() <= 80 &&
+        data.endpointUrl is string && data.endpointUrl.size() <= 256 &&
+        data.limitationNote is string && data.limitationNote.size() <= 500 &&
+        data.lastHeartbeatAt is string && data.lastHeartbeatAt.size() <= 40 &&
+        data.lastEventAt is string && data.lastEventAt.size() <= 40 &&
+        data.eventsProcessedCount is number && data.eventsProcessedCount >= 0 &&
+        data.updatedAt is timestamp &&
+        data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128;
+    }
+
+    function isValidAdminSettings(data) {
+      return data.keys().hasAll([
+          'groupId', 'groupCreationDate', 'timezone', 'deduplicationEnabled',
+          'storeMetadataOnly', 'webhookHeaderName', 'updatedAt', 'updatedBy'
+        ]) &&
+        data.keys().hasOnly([
+          'groupId', 'groupCreationDate', 'timezone', 'deduplicationEnabled',
+          'storeMetadataOnly', 'webhookHeaderName', 'updatedAt', 'updatedBy'
+        ]) &&
+        isValidId(data.groupId) &&
+        data.groupId == 'moonlight-gang' &&
+        isValidDateKey(data.groupCreationDate) &&
+        data.timezone is string && data.timezone.size() >= 1 && data.timezone.size() <= 40 &&
+        data.deduplicationEnabled is bool &&
+        data.storeMetadataOnly is bool &&
+        data.webhookHeaderName is string && data.webhookHeaderName.size() >= 1 && data.webhookHeaderName.size() <= 64 &&
+        data.updatedAt is timestamp &&
+        data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128;
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'role', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.role is string && data.role.size() <= 20 && data.role == 'admin' &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidUserLogin(data) {
+      return data.keys().hasAll([
+          'uid', 'groupId', 'email', 'displayName', 'photoUrl',
+          'loginCount', 'firstLoginAt', 'lastLoginAt', 'lastLoginIso', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'groupId', 'email', 'displayName', 'photoUrl',
+          'loginCount', 'firstLoginAt', 'lastLoginAt', 'lastLoginIso', 'updatedAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.uid == request.auth.uid &&
+        isValidId(data.groupId) &&
+        data.groupId == 'moonlight-gang' &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.email == request.auth.token.email &&
+        data.displayName is string && data.displayName.size() <= 100 &&
+        data.photoUrl is string && data.photoUrl.size() <= 512 &&
+        data.loginCount is number && data.loginCount >= 1 &&
+        data.firstLoginAt is timestamp &&
+        data.lastLoginAt is timestamp &&
+        data.lastLoginIso is string && data.lastLoginIso.size() >= 10 && data.lastLoginIso.size() <= 40 &&
+        data.updatedAt is timestamp;
+    }
+
+    // Collection Rules
+    match /groups/{groupId} {
+      allow get: if isValidId(groupId) && (isAdmin() || (isVerifiedUser() && existing().groupId == 'moonlight-gang'));
+      allow list: if isVerifiedUser() && resource.data.groupId == 'moonlight-gang';
+      allow create: if isSignedIn() &&
+        isValidId(groupId) &&
+        groupId == 'moonlight-gang' &&
+        isValidGroup(incoming()) &&
+        incoming().groupId == groupId &&
+        incoming().updatedAt == request.time &&
+        incoming().updatedBy == request.auth.uid &&
+        isAdmin();
+      allow update: if isSignedIn() &&
+        isValidId(groupId) &&
+        isValidGroup(incoming()) &&
+        isAdmin() &&
+        incoming().groupId == existing().groupId &&
+        incoming().updatedAt == request.time &&
+        incoming().updatedBy == request.auth.uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'creationDate', 'timezone', 'totalMembers', 'totalLifetimeMessages',
+          'totalActiveDays', 'highestDailyCount', 'highestDailyDate', 'updatedAt', 'updatedBy'
+        ]);
+      allow delete: if isValidId(groupId) && isAdmin();
+    }
+
+    match /members/{memberId} {
+      allow get: if isValidId(memberId) && (isAdmin() || (isVerifiedUser() && existing().groupId == 'moonlight-gang'));
+      allow list: if isVerifiedUser() && resource.data.groupId == 'moonlight-gang';
+      allow create: if isSignedIn() &&
+        isValidId(memberId) &&
+        isValidMember(incoming()) &&
+        incoming().memberId == memberId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        groupExistsAfter(incoming().groupId);
+      allow update: if isSignedIn() &&
+        isValidId(memberId) &&
+        isValidMember(incoming()) &&
+        isAdmin() &&
+        incoming().memberId == existing().memberId &&
+        incoming().groupId == existing().groupId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'handle', 'avatarUrl', 'totalMessages',
+          'lastActiveAt', 'lastActiveDateDhaka', 'updatedAt'
+        ]);
+      allow delete: if isValidId(memberId) && isAdmin();
+    }
+
+    match /messageEvents/{messageId} {
+      allow get: if isValidId(messageId) && (isAdmin() || (isVerifiedUser() && existing().groupId == 'moonlight-gang'));
+      allow list: if isVerifiedUser() && resource.data.groupId == 'moonlight-gang';
+      allow create: if isSignedIn() &&
+        isValidId(messageId) &&
+        isValidMessageEvent(incoming()) &&
+        incoming().messageId == messageId &&
+        incoming().createdBy == request.auth.uid &&
+        incoming().receivedTimestamp == request.time &&
+        isAdmin() &&
+        groupExistsAfter(incoming().groupId) &&
+        existsAfter(/databases/$(database)/documents/members/$(incoming().senderId)) &&
+        existsAfter(/databases/$(database)/documents/dailyStatistics/$(incoming().dateKeyDhaka));
+      allow update: if false;
+      allow delete: if isValidId(messageId) && isAdmin();
+    }
+
+    match /dailyStatistics/{dateKey} {
+      allow get: if isValidId(dateKey) && (isAdmin() || (isVerifiedUser() && existing().groupId == 'moonlight-gang'));
+      allow list: if isVerifiedUser() && resource.data.groupId == 'moonlight-gang';
+      allow create: if isSignedIn() &&
+        isValidId(dateKey) &&
+        isValidDailyStatistic(incoming()) &&
+        incoming().dateKey == dateKey &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        groupExistsAfter(incoming().groupId);
+      allow update: if isSignedIn() &&
+        isValidId(dateKey) &&
+        isValidDailyStatistic(incoming()) &&
+        isAdmin() &&
+        incoming().dateKey == existing().dateKey &&
+        incoming().groupId == existing().groupId &&
+        incoming().monthKey == existing().monthKey &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'totalMessages', 'activeMemberCount', 'updatedAt'
+        ]);
+      allow delete: if isValidId(dateKey) && isAdmin();
+    }
+
+    match /monthlyStatistics/{monthKey} {
+      allow get: if isValidId(monthKey) && (isAdmin() || (isVerifiedUser() && existing().groupId == 'moonlight-gang'));
+      allow list: if isVerifiedUser() && resource.data.groupId == 'moonlight-gang';
+      allow create: if isSignedIn() &&
+        isValidId(monthKey) &&
+        isValidMonthlyStatistic(incoming()) &&
+        incoming().monthKey == monthKey &&
+        incoming().updatedAt == request.time &&
+        isAdmin() &&
+        groupExistsAfter(incoming().groupId);
+      allow update: if isSignedIn() &&
+        isValidId(monthKey) &&
+        isValidMonthlyStatistic(incoming()) &&
+        isAdmin() &&
+        incoming().monthKey == existing().monthKey &&
+        incoming().groupId == existing().groupId &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'totalMessages', 'activeDays', 'peakDailyMessages', 'peakDate', 'updatedAt'
+        ]);
+      allow delete: if isValidId(monthKey) && isAdmin();
+    }
+
+    match /integrationStatus/{groupId} {
+      allow get: if isValidId(groupId) && (isAdmin() || (isVerifiedUser() && existing().groupId == 'moonlight-gang'));
+      allow list: if isVerifiedUser() && resource.data.groupId == 'moonlight-gang';
+      allow create: if isSignedIn() &&
+        isValidId(groupId) &&
+        groupId == 'moonlight-gang' &&
+        isValidIntegrationStatus(incoming()) &&
+        incoming().groupId == groupId &&
+        incoming().updatedAt == request.time &&
+        incoming().updatedBy == request.auth.uid &&
+        isAdmin() &&
+        groupExistsAfter(incoming().groupId);
+      allow update: if isSignedIn() &&
+        isValidId(groupId) &&
+        isValidIntegrationStatus(incoming()) &&
+        isAdmin() &&
+        incoming().groupId == existing().groupId &&
+        incoming().updatedAt == request.time &&
+        incoming().updatedBy == request.auth.uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'status', 'adapterName', 'endpointUrl', 'limitationNote',
+          'lastHeartbeatAt', 'lastEventAt', 'eventsProcessedCount', 'updatedAt', 'updatedBy'
+        ]);
+      allow delete: if isValidId(groupId) && isAdmin();
+    }
+
+    match /adminSettings/{groupId} {
+      allow get: if isValidId(groupId) && isAdmin();
+      allow list: if false;
+      allow create: if isSignedIn() &&
+        isValidId(groupId) &&
+        groupId == 'moonlight-gang' &&
+        isValidAdminSettings(incoming()) &&
+        incoming().groupId == groupId &&
+        incoming().updatedAt == request.time &&
+        incoming().updatedBy == request.auth.uid &&
+        isAdmin() &&
+        groupExistsAfter(incoming().groupId);
+      allow update: if isSignedIn() &&
+        isValidId(groupId) &&
+        isValidAdminSettings(incoming()) &&
+        isAdmin() &&
+        incoming().groupId == existing().groupId &&
+        incoming().updatedAt == request.time &&
+        incoming().updatedBy == request.auth.uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'groupCreationDate', 'timezone', 'deduplicationEnabled',
+          'storeMetadataOnly', 'webhookHeaderName', 'updatedAt', 'updatedBy'
+        ]);
+      allow delete: if isValidId(groupId) && isAdmin();
+    }
+
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && (isBootstrappedAdmin() || (isVerifiedUser() && request.auth.uid == uid));
+      allow list: if false;
+      allow create: if isSignedIn() &&
+        isValidId(uid) &&
+        isValidAdminUser(incoming()) &&
+        incoming().uid == uid &&
+        incoming().createdAt == request.time &&
+        isBootstrappedAdmin();
+      allow update: if false;
+      allow delete: if isValidId(uid) && isBootstrappedAdmin();
+    }
+
+    match /userLogins/{uid} {
+      allow get: if isValidId(uid) && (isAdmin() || (isVerifiedUser() && request.auth.uid == uid));
+      allow list: if isAdmin() && resource.data.groupId == 'moonlight-gang';
+      allow create: if isVerifiedUser() &&
+        isValidId(uid) &&
+        request.auth.uid == uid &&
+        isValidUserLogin(incoming()) &&
+        incoming().uid == uid &&
+        incoming().loginCount == 1 &&
+        incoming().firstLoginAt == request.time &&
+        incoming().lastLoginAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(uid) &&
+        request.auth.uid == uid &&
+        isValidUserLogin(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().groupId == existing().groupId &&
+        incoming().firstLoginAt == existing().firstLoginAt &&
+        incoming().lastLoginAt == request.time &&
+        incoming().updatedAt == request.time &&
+        incoming().loginCount == existing().loginCount + 1 &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'email', 'displayName', 'photoUrl', 'loginCount',
+          'lastLoginAt', 'lastLoginIso', 'updatedAt'
+        ]);
+      allow delete: if isValidId(uid) && isAdmin();
+    }
+  }
+}

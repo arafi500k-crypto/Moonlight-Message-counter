@@ -1,0 +1,6 @@
+{
+  "name": "MoonLight Gang Analytics",
+  "description": "Real-time message activity monitoring and analytics dashboard for the MoonLight Gang TikTok group chat.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
